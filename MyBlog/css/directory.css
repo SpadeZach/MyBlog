@@ -1,0 +1,10 @@
+.directory { float: left; width: 100%; overflow: hidden; }
+.directory li { margin-bottom: 10px; overflow: hidden; padding: 20px; background: #fff }
+.directory li .imgPic{overflow: hidden;width: 90%;margin: 0 auto;padding-top: 20px;}
+.directory li img{overflow: hidden;width: 100%;}
+.bigDataDiv {float: left; width: 100%; overflow: hidden; background-color: white}
+.bigDataDiv li { margin-bottom: 10px; overflow: hidden; padding: 20px; background: #fff }
+.bigDataDiv li h4{margin-top: 20px}
+.bigDataDiv li .showPic{overflow: hidden;width: 100%;padding-top: 20px;margin-bottom: 20px;}
+.bigDataDiv li .annotation{margin-left: 20px;color: green;}
+.bigDataDiv li .logoTile{color: darkgray;font-size: 12px;margin-top: 20px;overflow: hidden;}
