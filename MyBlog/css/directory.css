@@ -8,3 +8,8 @@
 .bigDataDiv li .showPic{overflow: hidden;width: 100%;padding-top: 20px;margin-bottom: 20px;}
 .bigDataDiv li .annotation{margin-left: 20px;color: green;}
 .bigDataDiv li .logoTile{color: darkgray;font-size: 12px;margin-top: 20px;overflow: hidden;}
+.rnArticle{margin-top: 20px;background: black;opacity:0.7;filter:alpha(opacity=70);border-radius:5px;
+-moz-border-radius:5px; /* 老的 Firefox */}
+.rnArticle p{margin: 10px;opacity:1;filter:alpha(opacity=100);color: white;}
+.rnArticle span{margin: 10px;opacity:1;filter:alpha(opacity=100);color: gray;}
+.directory .annotation{color: gray;}
