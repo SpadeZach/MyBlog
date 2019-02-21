@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>Zookeeper、HA集群</title>
+		<meta name="keywords" content="¸öÈË²©¿Í,ÑîÇà¸öÈË²©¿Í,¸öÈË²©¿ÍÄ£°å,ÑîÇà" />
+		<meta name="description" content="ÑîÇà¸öÈË²©¿Í£¬ÊÇÒ»¸öÕ¾ÔÚwebÇ°¶ËÉè¼ÆÖ®Â·µÄÅ®³ÌÐòÔ±¸öÈËÍøÕ¾£¬Ìá¹©¸öÈË²©¿ÍÄ£°åÃâ·Ñ×ÊÔ´ÏÂÔØµÄ¸öÈËÔ­´´ÍøÕ¾¡£" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<link href="../../css/base.css" rel="stylesheet">
+		<link href="../../css/index.css" rel="stylesheet">
+		<link href="../../css/m.css" rel="stylesheet">
+		<link href="../../css/directory.css" rel="stylesheet">
+		<link href="http://cdn.bootcss.com/highlight.js/8.0/styles/monokai_sublime.min.css" rel="stylesheet">  
+		<script src="http://cdn.bootcss.com/highlight.js/8.0/highlight.min.js"></script>
+		<script >hljs.initHighlightingOnLoad();</script>  
+		<!--[if lt IE 9]>
+<script src="js/modernizr.js"></script>
+<![endif]-->
+	</head>
+	<body>
+		<header>
+  			<div class="tophead">
+    				<div class="logo"><a href="iOSTable.html">赵博个人博客</a></div>
+ 		 	</div>
+		</header>
+		<article>
+			<h1 class="t_nav"><a href="BigDataList.html" class="n1">目录</a></h1>
+			<div class="bigDataDiv">
+    				<div class="mt20"></div>
+    				<li>
+    				<h3 class="blogtitle">Zookeeper安装</h3>
+					<!-- <a href="https://www.apache.org/dyn/closer.cgi/zookeeper/">zookeeper安装包下载官网</a> -->
+					<p>https://www.apache.org/dyn/closer.cgi/zookeeper 下载地址</p>
+					<pre><code>
+tar -zxvf zookeeper-3.4.12.tar.gz -C /usr/apps/
+cp zoo_sample.cfg zoo.cfg
+vi zoo.cfg
+dataDir=/root/zkdata
+server.1=192.168.219.11:2888:3888
+server.2=192.168.219.12:2888:3888
+server.3=192.168.219.13:2888:3888
+
+#配置发送到对应机器上
+#并到对应机器上创建/root/zkdata/,并在目录中生成myid=1or2or3
+mkdir /root/zkdata
+echo 1 > zkdata/myid
+car zkdata/myid			
+					</code></pre>
+<p>启动zookeeper集群</p>
+					<pre><code>
+bin/zkServer.sh start
+zkServer.sh status #查看状态
+					</code></pre>
+					<p>一个一个启动zookeeper太麻烦，我们手写一个.sh脚本来启动 bash zkmanager.sh start</p>
+					<pre><code>
+vi zkmanager.sh
+!/bin/bash
+for host in 192.168.219.11 192.168.219.12 192.168.219.13
+do
+ssh $host "source /etc/profile;/root/apps/zookeeper-3.1/bin/zkServer.sh $1"
+echo "${host}:${1}ing…."
+done
+
+sleep 2
+for host in 192.168.219.11 192.168.219.12 192.168.219.13
+do
+ssh $host "source /etc/profile;/root/apps/zookeeper-3.1/bin/zkServer.sh status"
+echo "${host}:${1}ing…."
+done
+					</code></pre>
+
+	      			<h3 class="blogtitle">HA集群搭建、Linux准备7台</h3>
+	      			<pre><code>
+//删除机器上原有的hadoop存储文件目录
+rm -rf /root/hdpdata
+//由于以后可能不需要HA集群所以需要copy下
+mkdir /root/hdp-conf-bak
+cp hadoop-env.sh core.site.xml hdfs-site.xml yarn.site.xml /root/hdp-conf-bak
+
+	      			</code></pre>
+	      			<hr />
+	      			<h4>集群配置</h4>
+	      			<p>1.core.site.xml</p>
+					<pre><code>
+&lt;configuration&gt;
+	&lt;property&gt;
+		&lt;name&gt;fs.defaultFS&lt;/name&gt;
+		&lt;value&gt;hdfs://hdp24&lt;/value&gt; #value为一个不存在的服务器地址
+	&lt;/property&gt;
+&lt;/configuration&gt;
+&lt;configuration&gt;
+	&lt;property&gt;
+		&lt;name&gt;hadoop.tmp.dir&lt;/name&gt;
+		&lt;value&gt;/root/hdpTmp&lt;/value&gt; #可有可无
+	&lt;/property&gt;
+&lt;/configuration&gt;
+&lt;configuration&gt;
+	&lt;property&gt;
+		&lt;name&gt;ha.zookeeper.quorum&lt;/name&gt;
+		&lt;value&gt;192.168.11:2181,192.168.12:2181,192.168.13:2181&lt;/value&gt;
+	&lt;/property&gt;
+&lt;/configuration&gt;
+					</code></pre>
+					<p>2.hdfs-site.xml 直接复制粘贴就好</p>
+					<pre><code>
+&lt;!--指定hdfs的nameservice，需要和core-site.xml中的保持一致 --&gt;
+&lt;configuration&gt;
+	&lt;property&gt;
+		&lt;name&gt;dfs.nameservices&lt;/name&gt;
+		&lt;value&gt;hdp24&lt;/value&gt;
+	&lt;/property&gt;
+	&lt;!-- hdp24下面有两个NameNode，分别是nn1，nn2 --&gt;
+	&lt;property&gt;
+		&lt;name&gt;dfs.ha.namenodes.hdp24&lt;/name&gt;
+		&lt;value&gt;nn1,nn2&lt;/value&gt;
+	&lt;/property&gt;
+	&lt;!-- nn1的RPC通信地址 --&gt;
+	&lt;property&gt;
+		&lt;name&gt;dfs.namenode.rpc-address.hdp24.nn1&lt;/name&gt;
+		&lt;value&gt;hdp-01:9000&lt;/value&gt;
+	&lt;/property&gt;
+	&lt;!-- nn1的http通信地址 --&gt;
+	&lt;property&gt;
+		&lt;name&gt;dfs.namenode.http-address.hdp24.nn1&lt;/name&gt;
+		&lt;value&gt;hdp-01:50070&lt;/value&gt;
+	&lt;/property&gt;
+	&lt;!-- nn2的RPC通信地址 --&gt;
+	&lt;property&gt;
+		&lt;name&gt;dfs.namenode.rpc-address.hdp24.nn2&lt;/name&gt;
+		&lt;value&gt;hdp-02:9000&lt;/value&gt;
+	&lt;/property&gt;
+	&lt;!-- nn2的http通信地址 --&gt;
+	&lt;property&gt;
+		&lt;name&gt;dfs.namenode.http-address.hdp24.nn2&lt;/name&gt;
+		&lt;value&gt;hdp-02:50070&lt;/value&gt;
+	&lt;/property&gt;
+	&lt;!-- 指定NameNode的共享edits元数据在JournalNode上的存放位置 --&gt;
+	&lt;property&gt;
+		&lt;name&gt;dfs.namenode.shared.edits.dir&lt;/name&gt;
+		&lt;value&gt;qjournal://hdp-05:8485;hdp-06:8485;hdp-07:8485/hdp24&lt;/value&gt;
+	&lt;/property&gt;
+	&lt;!-- 指定JournalNode在本地磁盘存放数据的位置 --&gt;
+	&lt;property&gt;
+		&lt;name&gt;dfs.journalnode.edits.dir&lt;/name&gt;
+		&lt;value&gt;/root/hdpdata/journaldata&lt;/value&gt;
+	&lt;/property&gt;
+	&lt;!-- 开启NameNode失败自动切换 --&gt;
+	&lt;property&gt;
+		&lt;name&gt;dfs.ha.automatic-failover.enabled&lt;/name&gt;
+		&lt;value&gt;true&lt;/value&gt;
+	&lt;/property&gt;
+	&lt;!-- 配置失败自动切换实现方式 --&gt;
+	&lt;property&gt;
+		&lt;name&gt;dfs.client.failover.proxy.provider.hdp24&lt;/name&gt;
+		&lt;value&gt;org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider&lt;/value&gt;
+	&lt;/property&gt;
+	&lt;!-- 配置隔离机制方法，多个机制用换行分割，即每个机制暂用一行 --&gt;
+	&lt;property&gt;
+		&lt;name&gt;dfs.ha.fencing.methods&lt;/name&gt;
+		&lt;value&gt;
+		sshfence
+		shell(/bin/true)#自己写的脚本给自己发短信
+		&lt;/value&gt;
+	&lt;/property&gt;
+	&lt;!-- 使用sshfence隔离机制时需要ssh免登陆 --&gt;
+	&lt;property&gt;
+		&lt;name&gt;dfs.ha.fencing.ssh.private-key-files&lt;/name&gt;
+		&lt;value&gt;/root/.ssh/id_rsa&lt;/value&gt;
+	&lt;/property&gt;
+	&lt;!-- 配置sshfence隔离机制超时时间 --&gt;
+	&lt;property&gt;
+		&lt;name&gt;dfs.ha.fencing.ssh.connect-timeout&lt;/name&gt;
+		&lt;value&gt;30000&lt;/value&gt;
+	&lt;/property&gt;
+&lt;/configuration&gt;
+					</code></pre>
+					<p>3.yarn-site.xml</p>
+					<pre><code>
+&lt;configuration&gt;
+	&lt;!-- 开启RM高可用 --&gt;
+	&lt;property&gt;
+		&lt;name&gt;yarn.resourcemanager.ha.enabled&lt;/name&gt;
+		&lt;value&gt;true&lt;/value&gt;
+	&lt;/property&gt;
+	&lt;!-- 指定RM的cluster id --&gt;
+	&lt;property&gt;
+		&lt;name&gt;dyarn.resourcemanager.cluster-id&lt;/name&gt;
+		&lt;value&gt;yrc&lt;/value&gt;
+	&lt;/property&gt;
+	&lt;!-- 指定RM的逻辑名字 --&gt;
+	&lt;property&gt;
+		&lt;name&gt;yarn.resourcemanager.ha.rm-ids&lt;/name&gt;
+		&lt;value&gt;rm1,rm2&lt;/value&gt;
+	&lt;/property&gt;
+	&lt;!-- 分别指定RM的地址 --&gt;
+	&lt;property&gt;
+		&lt;name&gt;yarn.resourcemanager.hostname.rm1&lt;/name&gt;
+		&lt;value&gt;hdp-03&lt;/value&gt;
+	&lt;/property&gt;
+	&lt;!-- nn2的RPC通信地址 --&gt;
+	&lt;property&gt;
+		&lt;name&gt;yarn.resourcemanager.hostname.rm2&lt;/name&gt;
+		&lt;value&gt;hdp-04&lt;/value&gt;
+	&lt;/property&gt;
+	&lt;!-- 指定zk集群地址,自己配的集群 --&gt;
+	&lt;property&gt;
+		&lt;name&gt;yarn.resourcemanager.zk-address&lt;/name&gt;
+		&lt;value&gt;hdp-01:2181,hdp-02:2181,hdp-03:2181&lt;/value&gt;
+	&lt;/property&gt;
+	&lt;property&gt;
+		&lt;name&gt;yarn.nodemanager.aux-services&lt;/name&gt;
+		&lt;value&gt;mapreduce_shuffle&lt;/value&gt;
+	&lt;/property&gt;
+&lt;/configuration&gt;
+					</code></pre>
+					<p>第一台namenode hdp01</p>
+					<pre><code>
+vi slaves
+192.168.219.11
+192.168.219.12
+192.168.219.13
+192.168.219.14
+					</code></pre>
+					<p>第一台yarn hdp03</p>
+					<pre><code>
+vi slaves
+192.168.219.11
+192.168.219.12
+192.168.219.13
+192.168.219.14
+					</code></pre>
+					<h4>所有机器都要配置免密登录</h4>
+					<pre><code>
+#第一次启动
+#1.启动zookeeper
+#2.手动启动journalnode
+#日志需要在5，6，7服务器启动
+hadoop-daemon.sh start journalnode
+#1号服务器
+hadoop namenode -format
+#格式化后的hdpdata 拷贝到2号服务器
+#格式化zkfc
+hdfs zkfc -formatZK
+#以后直接start-dfs.sh
+#3，4服务器resourcemanager start-yarn.sh
+					</code></pre>
+    				</li>
+
+    			</div>
+		</article>
+		
+	</body>
+</html>
